@@ -8,6 +8,8 @@ const bcrypt = require("bcryptjs");
 // const db = spicedpg("postgres:dsivkov:greyer@localhost:5432/caper-petition");
 const db = require("./db.js");
 
+
+console.log("random string");
 // cookie session and secret
 app.use(
     cookieSession({
