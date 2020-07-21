@@ -8,7 +8,6 @@ const bcrypt = require("bcryptjs");
 // const db = spicedpg("postgres:dsivkov:greyer@localhost:5432/caper-petition");
 const db = require("./db.js");
 
-
 console.log("random string");
 // cookie session and secret
 app.use(
@@ -329,9 +328,8 @@ app.get("/signers", (req, res) => {
         if (user.sigId) {
             db.getSupporters()
                 .then((result) => {
-                    console.log("result.rows", result.rows)
+                    console.log("result.rows", result.rows);
                     return result.rows;
-
                 })
                 .then((results) => {
                     res.render("signers", { supporters: results });
@@ -386,15 +384,12 @@ app.get("/profile/edit", (req, res) => {
     });
 });
 
-
-
-
 //// LOGOUT ?////////
 app.get("/logout", (req, res) => {
     req.session = null;
     res.redirect("/login");
 });
 
-app.listen(8080, () =>
+app.listen(process.env.PORT || 8080, () =>
     console.log("If nothing else, at least the server is running ...")
 );
