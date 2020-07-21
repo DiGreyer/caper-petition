@@ -2,6 +2,7 @@ const express = require("express");
 const exphbs = require("express-handlebars");
 const app = express();
 const cookieSession = require("cookie-session");
+const csurf = require("csurf");
 const bcrypt = require("bcryptjs");
 const spicedpg = require("spiced-pg");
 // const db = spicedpg("postgres:dsivkov:greyer@localhost:5432/caper-petition");
@@ -11,7 +12,7 @@ const db = require("./db.js");
 app.use(
     cookieSession({
         name: "session",
-        secret: "greyer",
+        secret: "something",
         maxAge: 1000 * 60 * 60 * 24 * 14,
     })
 );
@@ -39,6 +40,9 @@ app.use(function (req, res, next) {
 app.engine("handlebars", exphbs());
 app.set("view engine", "handlebars");
 
+// use static files cs, img and so on for later on..
+app.use(express.static("public"));
+
 // body parser..
 app.use(
     express.urlencoded({
@@ -46,20 +50,26 @@ app.use(
     })
 );
 
-// use static files cs, img and so on for later on..
-app.use(express.static("public"));
+/// CSURF ... not sure how it works ...
+// app.use(csurf());
 
-// home redirect
+// // Prevent to be loaded in a frame
+
+// app.use((req, res, next) => {
+//     res.set("X-Frame-Options", "deny");
+//     // add csrfToken with Token value to empty res.locals object
+//     res.locals.csrfToken = req.csrfToken();
+//     next();
+// });
+
+// HOME PAGE
 app.get("/", function (req, res) {
-    // console.log("Seesion cookie home", req.session);
-    // checking if the user has already signed the petition, else redirecting to signing page
-    if (req.session.signatureId) {
-        // if user has already signed up redirecting to thanks page
-        res.redirect("/thanks");
+    //check for cookie..
+    const { user } = req.session;
+    if (user) {
+        res.redirect("/petition");
     } else {
-        // res.redirect("/petition");
-
-        res.redirect("/login");
+        res.redirect("/register");
     }
 });
 
@@ -67,252 +77,273 @@ app.get("/", function (req, res) {
 
 // register form page
 app.get("/register", function (req, res) {
-    res.render("register"); //, { query: req.query });
+    const { user } = req.session;
+    if (user) {
+        res.redirect("/petition");
+    } else {
+        res.render("register");
+    }
 });
 
 app.post("/register", function (req, res) {
     let user = req.body;
-    // encrypting password
-    let salt = bcrypt.genSaltSync(10);
-    let hash = bcrypt.hashSync(user.password, salt);
-    user.password = hash;
-    // saving user to db
-    // let array = [user.first, user.last, user.email, user.password];
+    //check for empty string
+    if (
+        user.first != "" &&
+        user.last != "" &&
+        user.email != "" &&
+        user.password != ""
+    ) {
+        // encrypting password
+        let salt = bcrypt.genSaltSync(10);
+        let hash = bcrypt.hashSync(user.password, salt);
+        user.password = hash;
+        // saving user to db
 
-    db.registerUser(user.first, user.last, user.email, user.password)
+        db.registerUser(user.first, user.last, user.email, user.password)
+            .then((result) => {
+                // console.log("req.ses.userId:", req.session);
+                req.session.user = {
+                    firstName: user.first,
+                    lastName: user.last,
+                    userId: result.rows[0].id,
+                };
+                res.redirect("/profile");
+
+                // // console.log("new req.ses:", req.session.userId);
+                // res.redirect("/petition");
+            })
+            .catch((err) => {
+                console.log("error in Regiser:", err);
+                res.render("register", { error: true });
+            });
+    } else if (
+        // the values are empty
+        user.first == "" ||
+        user.last == "" ||
+        user.email == "" ||
+        user.password == ""
+    ) {
+        // render the register template with error helper
+        res.render("register", { error: true });
+    }
+});
+
+/// Profile page
+app.get("/profile", (req, res) => {
+    // the good old cookie spiel
+    const { user } = req.session;
+    if (user) {
+        res.render("profile");
+    } else {
+        res.redirect("/register");
+    }
+});
+
+// POST /profile
+
+app.post("/profile", (req, res) => {
+    let { age, city, url } = req.body;
+    const { user } = req.session;
+    // check for empty string
+    if (age == "" && city == "" && url == "") {
+        // if the user has not entered anything,
+        // redirect to petition
+        res.redirect("/petition");
+    } else {
+        db.profileInfo(age, city, url, user.userId)
+            .then(() => {
+                res.redirect("/petition");
+            })
+            .catch((err) => {
+                console.log("Error in addProfileInfo: ", err);
+                res.render("profile", { error: true });
+            });
+    }
+});
+
+//////// LOGIN FORM PAGE //////////////
+
+app.get("/login", (req, res) => {
+    const { user } = req.session;
+    if (user) {
+        res.redirect("/petition");
+    } else {
+        res.render("login");
+    }
+});
+
+app.post("/login", function (req, res) {
+    //used entered data and compare with db  - email / password
+    var credentials = req.body;
+    var first;
+    var last;
+    var dbPass;
+    var id;
+
+    db.login(credentials.email)
         .then((result) => {
-            // console.log("req.ses.userId:", req.session);
-            req.session.userId = result.rows[0].id;
-
-            // console.log("new req.ses:", req.session.userId);
-            res.redirect("/petition");
+            //get profile data
+            first = result.rows[0].first;
+            last = result.rows[0].last;
+            dbPass = result.rows[0].password;
+            id = result.rows[0].id;
+            return dbPass;
+        })
+        .then((dbPass) => {
+            return bcrypt.compare(credentials.password, dbPass);
+        })
+        .then((matchValue) => {
+            if (matchValue) {
+                // create user cookie object and
+                // give it the full name and user
+                // ID stored from checkLogin
+                req.session.user = {
+                    firstName: first,
+                    lastName: last,
+                    userId: id,
+                };
+                return req.session.user.userId;
+            } else if (!matchValue) {
+                res.render("login", { error: true });
+            }
+        })
+        .then((userId) => {
+            // check for signature with user ID
+            db.checkSignature(userId).then((sigId) => {
+                if (sigId.rows[0].id) {
+                    // store the signature ID in the cookie
+                    req.session.user.sigId = sigId.rows[0].id;
+                    res.redirect("/thanks");
+                } else if (!sigId.rows[0].id) {
+                    res.redirect("/petition");
+                }
+            });
         })
         .catch((err) => {
-            console.log("error in Regiser:", err);
+            console.log("Error in checkLogin: ", err);
+            res.render("login", { error: true });
         });
 });
 
 // petition signing page
-app.get("/petition", function (req, res) {
-    // checking if user has already signed the petition
-
-    console.log("user has signed", req.session.signature);
-    if (req.session.signature) {
+app.get("/petition", (req, res) => {
+    // check for signature ID cookie
+    const { user } = req.session;
+    if (user.sigId) {
         res.redirect("/thanks");
     } else {
         res.render("petition");
     }
 });
 
-// petition signing
 app.post("/petition", function (req, res) {
-    // getting data from user input
-    // const first = req.body.first;  we have them in register
-    // const last = req.body.last;
-
     // console.log("session on petition:", req.session);
     const signature = req.body.signature;
+    const { user } = req.session;
 
-    const userId = req.session.userId;
-
-    db.signUp(signature, userId)
-        .then((result) => {
-            req.session.id = result.rows[0].id;
-            res.redirect("/thanks");
-        })
-        .catch((err) => {
-            console.log("eror in signUp ", err);
-        });
+    //check to see if signed
+    if (signature != "") {
+        db.signUp(signature, user.userId)
+            .then((result) => {
+                user.sigId = result.rows[0].id;
+                // console.log('signititure cookie:', user.sigId);
+                res.redirect("/thanks");
+            })
+            .catch((err) => {
+                console.log("eror in signUp ", err);
+            });
+    } else {
+        res.render("petition", { error: true });
+    }
 });
 
-/////// OLD CODE ///////
-// app.post("/petition", function (req, res) {
-//     // checking if signature data uri is in the req.body
-//     if (req.body.signature) {
-//         //inserting new signature query
-//         var query =
-//             "INSERT INTO signatures(signature, user_id) values('" +
-//             req.body.signature +
-//             "','" +
-//             req.session.id +
-//             "') RETURNING id;";
+////thanks page //////
 
-//         db.query(query, (err, response) => {
-//             if (err) {
-//                 res.redirect("/petition?err=Something wrong with data");
-//             } else {
-//                 // adding signatureId into session
-//                 req.session.signatureId = response.rows[0].id;
-//                 // redirecting to thanks page
-//                 res.redirect("/petition/signed");
-//             }
-//         });
-//     } else {
-//         // redirecting to signature page if data uri from req.body missing
-//         res.redirect("/petition?err=signature Missing");
-//     }
-// });
+app.get("/thanks", (req, res) => {
+    const { user } = req.session;
+    let supportNumbers;
 
-//////////  END of OLD CODE //////////////////////
-
-//thanks page
-app.get("/thanks", function (req, res) {
-    // if cookie
-    const { id } = req.session;
-    let supporters;
-    if (id) {
+    //check to see if signed
+    if (user.sigId) {
         db.signersCount()
             .then((result) => {
-                // console.log("count is : ", result);
-                supporters = result;
+                supportNumbers = result;
             })
             .catch((err) => {
-                console.log("Error count: ", err);
+                console.log("Error in signersCount: ", err);
             });
-        db.signature(id)
+        db.signature(user.sigId)
             .then((result) => {
-                res.render("thanks", {
-                    signature: result,
-                    number: supporters,
-                });
+                // check for edit cookie
+                if (user.edit) {
+                    // delete the edit cookie
+                    delete user.edit;
+                    res.render("thanks", {
+                        first: user.firstName,
+                        last: user.lastName,
+                        signature: result,
+                        number: supportNumbers,
+                        update: true,
+                    });
+                } else {
+                    // normal thanks render
+                    res.render("thanks", {
+                        first: user.firstName,
+                        last: user.lastName,
+                        signature: result,
+                        number: supportNumbers,
+                    });
+                }
             })
             .catch((err) => {
-                console.log("Error in signature: ", err);
+                console.log("Error in getSignature: ", err);
             });
     } else {
         res.redirect("/petition");
     }
+});
+
+//////// DELETE SIGNATURE /////////
+app.post("/thanks/delete", (req, res) => {
+    const { user } = req.session;
+    db.deleteSignature(user.userId)
+        .then(() => {
+            // delete signature ID cookie
+            delete user.sigId;
+            res.redirect("/petition");
+        })
+        .catch((err) => {
+            console.log("Error in deleteSignature: ", err);
+        });
 });
 
 //listing all signed users
-app.get("/signers", function (req, res) {
-    // checking if user has signed already
-    if (req.session.signatureId) {
-        db.whoSigned()
-            .then((result) => {
-                return result.rows;
-            })
-            .then((results) => {
-                res.render("signers", { supporters: results });
-            })
-            .catch((err) => {
-                console.log("Error in whoSigned: ", err);
-            });
+app.get("/signers", (req, res) => {
+    //check for cookie
+    const { user } = req.session;
+    if (user) {
+        // check for signature
+        if (user.sigId) {
+            db.getSupporters()
+                .then((result) => {
+                    return result.rows;
+                })
+                .then((results) => {
+                    res.render("signers", { supporters: results });
+                })
+                .catch((err) => {
+                    console.log("Error in getSupporters: ", err);
+                });
+        } else {
+            // promt t osign if no signature
+            res.redirect("/petition");
+        }
+        // if no user cookie, back to login
     } else {
-        res.redirect("/petition");
+        res.redirect("/login");
     }
 });
-
-//////// LOGIN FORM PAGE //////////////
-
-app.get("/login", function (req, res) {
-    // checking if there is user logged or petition was signed?
-    // if (req.session.id) {
-    //     if (req.session.signatureId) {
-    //         res.redirect("/thanks");
-    //     } else {
-    //         res.redirect("/petition");
-    //     }
-    // } else {
-    res.render("login");
-    // }
-});
-
-app.post("/login", function (req, res) {
-    //used entered data and compare with db  - email / password
-    var credentials = req.body;
-
-    db.login(credentials.email)
-        .then((result) => {
-            let passwordCompare = bcrypt.compareSync(
-                credentials.password,
-                result.rows[0].password
-            );
-            return passwordCompare;
-            // console.log("passwordCOmpare is :", passwordCompare);
-        })
-        .then((matchId) => {
-            if (matchId) {
-                // console.log("user id should be :", req.session.userId);
-                res.redirect("/petition");
-            } else {
-                console.log("user not found!!");
-                res.redirect("/login");
-            }
-        })
-        .catch((err) => {
-            console.log("error in login", err);
-        });
-});
-//     if (passwordCompare) {
-//         let foundUser = req.session;
-//     }
-
-// })
-////////////////////////
-//// OLD CODE /////////
-////////////////////
-
-// var findquery =
-//     "SELECT * from users WHERE email = '" + credentials.email + "' LIMIT 1";
-
-// db.query(findquery, (err, response) => {
-//     if (err) {
-//         console.log("err", err);
-//         res.redirect("/login?err=Something wrong with data");
-//     } else {
-//         var founduser = response.rows[0];
-
-//         if (founduser && founduser.id) {
-//             var passwordCompare = bcrypt.compareSync(
-//                 credentials.password,
-//                 founduser.password
-//             );
-//             if (passwordCompare) {
-//                 req.session = founduser;
-
-//                 // has user signed ?
-//                 var findsignature =
-//                     "SELECT * from signatures WHERE user_id = '" +
-//                     founduser.id +
-//                     "' LIMIT 1";
-//                 db.query(findsignature, (err, response) => {
-//                     var foundsignature = response.rows[0];
-//                     if (foundsignature && foundsignature.id) {
-//                         req.session.signatureId = foundsignature.id;
-//                         res.redirect("/petition/signed"); // if signature exists
-//                     } else {
-//                         res.redirect("/petition");
-//                     }
-//                 });
-//             } else {
-//                 console.log("wrong password");
-//                 res.redirect("/login?err=Wrong Password");
-//             }
-//         } else {
-//             console.log("err: ", err);
-//             res.redirect("/login?err=Something wrong with data");
-//         }
-//     }
-// });
-// });
-
-//// ////////////////
-/////    OLD CODE ////////
-////////////////////////////
-
-// var query =
-//     "INSERT INTO users(first, last, email, password) values($1, $2, $3, $4) RETURNING id;";
-// db.query(query, array, (err, response) => {
-//     if (err) {
-//         console.log("err: ", err);
-//         res.redirect("/register?err=Something wrong with data");
-//     } else {
-//         req.session.userId = response.rows[0].id; // saving registered user's id into session
-//         res.redirect("/register/profile"); // update profile
-//     }
-//     // });
-// });
 
 app.listen(8080, () =>
     console.log("If nothing else, at least the server is running ...")

@@ -1,0 +1,32 @@
+<div class="container">
+   
+    <h1>Random petition</h1>
+    {{#if error}}
+    <div><h3>Ooops, something went wrong ....</h3></div>
+    {{/if}}
+
+    
+    <p>Edit the info and update ...</a></p>
+</div>
+
+<form method="POST" class="edit">
+        <label for="first">First name:</label>
+        <input name="first" type="text" autocomplete="off" value={{first}}>
+        <label for="last">Last name:</label>
+        <input name="last" type="text" autocomplete="off" value={{last}}>
+        <label for="email">E-mail address:</label>
+        <input name="email" type="email" autocomplete="off" value={{email}}>
+        <label for="pw">Password:</label>
+        <input name="pw" type="password" autocomplete="off">
+        <label for="age">Age:</label>
+        <input name="age" type="number" autocomplete="off" value={{age}}>
+        <label for="city">City:</label>
+        <input name="city" type="text" autocomplete="off" value={{city}}>
+        <label for="url">Homepage:</label>
+        <input name="url" type="text" autocomplete="off" value={{url}}>
+       
+       
+        {{!-- <input type="hidden" name="_csrf" value="{{csrfToken}}"> --}}
+        <button>Update</button>
+</form>
+{{> nav}}

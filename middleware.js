@@ -49,13 +49,12 @@ module.requres.requireSignature = function requireSignature(req, res, next) {
     }
 };
 
-
 //middleware to check ifg user is loged in, not finished
 
-function requireLopggedInUser(req,res, next) {
-    if () {
-        res.redirect('/register');
-    } else {
-        next();
-    }
-}
+// function requireLopggedInUser(req,res, next) {
+//     if () {
+//         res.redirect('/register');
+//     } else {
+//         next();
+//     }
+// }

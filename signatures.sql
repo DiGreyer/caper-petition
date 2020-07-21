@@ -1,10 +1,8 @@
 DROP TABLE IF EXISTS signatures;
 
-
-CREATE TABLE signatures(
+CREATE TABLE signatures (
     id SERIAL PRIMARY KEY,
-    first VARCHAR(255) NOT NULL CHECK (first != ''),
-    last VARCHAR(255) NOT NULL CHECK (last != ''),
     signature TEXT NOT NULL CHECK (signature != ''),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -1,0 +1,38 @@
+<div>
+  <h1>Please register in order to sign the petition!</h1>
+  <div>
+              <form method="POST" action="/register" onsubmit="function(e){ e.preventDefault(); }">
+    <div>
+
+      <div>
+          <div>
+            <label>First Name</label>
+            <input type="text" name="first" />
+          </div>
+           <div>
+            <label>Last Name</label>
+            <input type="text" name="last" />
+          </div>
+           <div>
+            <label>Email</label>
+            <input type="email" name="email"  />
+          </div>
+            <div>
+            <label>Password</label>
+            <input type="password" name="password">
+          </div>
+            <div>
+            <button type="submit" >Signup</button>
+          </div>
+           <div>
+             <p>Already registered? Then please </p><a href="/login">log in</a>! </p>
+          </div>
+           
+      </div>
+     
+          </div>
+
+              </form>
+
+  </div>
+</div>
