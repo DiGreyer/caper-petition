@@ -4,7 +4,7 @@ const app = express();
 const cookieSession = require("cookie-session");
 const csurf = require("csurf");
 const bcrypt = require("bcryptjs");
-const spicedpg = require("spiced-pg");
+// const spicedpg = require("spiced-pg");
 // const db = spicedpg("postgres:dsivkov:greyer@localhost:5432/caper-petition");
 const db = require("./db.js");
 
@@ -31,10 +31,10 @@ app.use(
 // });
 
 // session values to hb
-app.use(function (req, res, next) {
-    res.locals.session = req.session;
-    next();
-});
+// app.use(function (req, res, next) {
+//     res.locals.session = req.session;
+//     next();
+// });
 
 // setting up handlesbars as default view engine
 app.engine("handlebars", exphbs());
@@ -327,7 +327,9 @@ app.get("/signers", (req, res) => {
         if (user.sigId) {
             db.getSupporters()
                 .then((result) => {
+                    console.log("result.rows", result.rows)
                     return result.rows;
+
                 })
                 .then((results) => {
                     res.render("signers", { supporters: results });
@@ -345,6 +347,52 @@ app.get("/signers", (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 8080, () =>
+app.get("/signers/:city", (req, res) => {
+    const { user } = req.session;
+    // if a cookie is set, render
+    if (user) {
+        const city = req.params.city;
+        db.supportersCity(city)
+            .then((result) => {
+                return result.rows;
+            })
+            .then((results) => {
+                res.render("city", { place: city, citySupporters: results });
+            })
+            .catch((err) => {
+                console.log("Error in supportersCity: ", err);
+            });
+    } else {
+        res.redirect("/register");
+    }
+});
+
+////// EDITING PROFILE///////////////
+
+app.get("/profile/edit", (req, res) => {
+    const { user } = req.session;
+    db.displayInfo(user.userId).then((result) => {
+        let profile = result.rows;
+        res.render("edit", {
+            first: profile[0].user_firstname,
+            last: profile[0].user_lastname,
+            email: profile[0].user_email,
+            age: profile[0].user_age,
+            city: profile[0].user_city,
+            url: profile[0].user_url,
+        });
+    });
+});
+
+
+
+
+//// LOGOUT ?////////
+app.get("/logout", (req, res) => {
+    req.session = null;
+    res.redirect("/login");
+});
+
+app.listen(8080, () =>
     console.log("If nothing else, at least the server is running ...")
 );

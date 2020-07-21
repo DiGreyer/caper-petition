@@ -1,21 +1,24 @@
-{{> nav}}
+<div class="container">
+
+    {{> nav}}
 
 
-<h1>Thanks for your support without even knowing the cause yet XD</h1>
+    <h1>Thanks for your support without even knowing the cause yet XD</h1>
 
-<p>See the other {{number}} who signed this petition blindly <a href="/signers">right here</a>!</p>
+    <p>See the other {{number}} who signed this petition blindly <a href="/signers">right here</a>!</p>
 
-</div>
-<div>
-    <p>Your Autograph right here:</p>
+
     <div>
-        <img src="{{signature}}" />
+        <p>Your Autograph right here:</p>
+        <div>
+            <img src="{{signature}}" />
+        </div>
+        <form action="/thanks/delete" method="POST">
+            <button id="delete">Delete your signature</button>
+
+
+
+            {{!-- <input type="hidden" name="_csrf" value="{{csrfToken}}"> --}}
+        </form>
     </div>
-    <form action="/thanks/delete" method="POST">
-        <button id="delete">Delete your signature</button>
-
-
-
-        {{!-- <input type="hidden" name="_csrf" value="{{csrfToken}}"> --}}
-    </form>
 </div>

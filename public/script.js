@@ -1,6 +1,4 @@
 (function () {
-    console.log("Yup, everything runs!");
-
     const canvas = $("canvas");
     const canvasContext = canvas[0].getContext("2d");
     let mouseDown = false;

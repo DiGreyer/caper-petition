@@ -1,14 +1,21 @@
 <div class="container">
-{{> nav}}
+    {{> nav}}
 
-<h1>See all the participanets in {{place}}</h1>
+    <h1>See all the participanets in {{place}}</h1>
 
-
+    <div class="signers">
+        {{#citySupporters}}
+        <div>
+            <p><a href="{{user_url}}" target="_blank">{{user_firstname}} {{user_lastname}}</a>, {{user_age}}</p>
+        </div>
+        {{/citySupporters}}
+    </div>
 
 </div>
 <div class="signers">
-{{#citySupporters}}
-<div><p><a href="{{user_url}}" target="_blank">{{user_firstname}} {{user_lastname}}</a>, {{user_age}}</p></div>
-{{/citySupporters}}
+    {{#citySupporters}}
+    <div>
+        <p><a href="{{user_url}}" target="_blank">{{user_firstname}} {{user_lastname}}</a>, {{user_age}}</p>
+    </div>
+    {{/citySupporters}}
 </div>
-{{> nav}}

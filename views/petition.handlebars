@@ -1,12 +1,18 @@
-<h1>Welcome to my Petition...</h1>
-<p>Here there will be a cool text describing my petition</p>
+<div class="container">
+
+    <h1>Welcome to my Petition...</h1>
+    <p>Here there will be a cool text describing my petition</p>
+
+
+    <form method="POST">
+        {{!-- <input name="first" type="text" placeholder="First name">
+    <input name="last" type="text" placeholder="Last name"> --}}
+        <input type="hidden" name="signature" id="signature">
+        <p>Sign here:</p>
+        <canvas width="700px" height="100px" id="canvas"></canvas>
+        <div>
+            <button id="button">Submit</button>
+        </div>
+    </form>
 
 </div>
-<form method="POST">
-    {{!-- <input name="first" type="text" placeholder="First name">
-    <input name="last" type="text" placeholder="Last name"> --}}
-    <input type="hidden" name="signature" id="signature">
-    <p>Sign here:</p>
-    <canvas width="700px" height="100px" id="canvas"></canvas>
-    <button id="button">Submit</button>
-</form>

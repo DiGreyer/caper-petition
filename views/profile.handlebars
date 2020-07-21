@@ -1,12 +1,13 @@
 <div class="container">
-   {{> nav}}
+    {{> nav}}
     <h1>Random petition</h1>
     <p>Add some additional info below</p>
-</div>
 
-{{#if error}}
-    <div id="error"><h3>Ooops, something went wrong</h3></div>
-{{/if}}
+    {{#if error}}
+    <div id="error">
+        <h3>Ooops, something went wrong</h3>
+    </div>
+    {{/if}}
 
 
 
@@ -14,9 +15,10 @@
         <input name="age" type="number" placeholder="Age" autocomplete="off">
         <input name="city" type="text" placeholder="City" autocomplete="off">
         <input name="url" type="text" placeholder="Homepage" autocomplete="off">
-      
+
 
 
         {{!-- <input type="hidden" name="_csrf" value="{{csrfToken}}"> --}}
         <button>Submit</button>
     </form>
+</div>
